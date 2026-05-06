@@ -1,7 +1,12 @@
-import Redis from "ioredis";
+import { createClient } from "redis";
 
 const { version } = await Bun.file("package.json").json();
-const redis = new Redis({ host: process.env.REDIS_HOST ?? "redis" });
+
+const redis = createClient({
+  url: `redis://${process.env.REDIS_HOST ?? "redis"}:6379`,
+});
+redis.on("error", (err) => console.error("Redis:", err.message));
+await redis.connect();
 
 const HISTORY_KEY = "cat:history";
 const HISTORY_LIMIT = 20;
@@ -9,8 +14,8 @@ const HISTORY_LIMIT = 20;
 async function randomCatUrl(): Promise<string> {
   const res = await fetch("https://api.thecatapi.com/v1/images/search");
   const [cat] = await res.json() as { url: string }[];
-  await redis.lpush(HISTORY_KEY, cat.url);
-  await redis.ltrim(HISTORY_KEY, 0, HISTORY_LIMIT - 1);
+  await redis.lPush(HISTORY_KEY, cat.url);
+  await redis.lTrim(HISTORY_KEY, 0, HISTORY_LIMIT - 1);
   return cat.url;
 }
 
@@ -21,7 +26,7 @@ const server = Bun.serve({
 
     if (url.pathname === "/api/cat") {
       const catUrl = await randomCatUrl();
-      const history = await redis.lrange(HISTORY_KEY, 0, -1);
+      const history = await redis.lRange(HISTORY_KEY, 0, -1);
       return new Response(JSON.stringify({ url: catUrl, history }), {
         headers: { "Content-Type": "application/json" },
       });
@@ -32,7 +37,7 @@ const server = Bun.serve({
     }
 
     const catUrl = await randomCatUrl();
-    const history = await redis.lrange(HISTORY_KEY, 0, -1);
+    const history = await redis.lRange(HISTORY_KEY, 0, -1);
 
     const thumbsHtml = history
       .map(u => `<img class="thumb" src="${u}" data-url="${u}" alt="previous cat" />`)
