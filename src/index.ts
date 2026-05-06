@@ -1,3 +1,5 @@
+const { version } = await Bun.file("package.json").json();
+
 async function randomCatUrl(): Promise<string> {
   const res = await fetch("https://api.thecatapi.com/v1/images/search");
   const [cat] = await res.json() as { url: string }[];
@@ -54,12 +56,20 @@ const server = Bun.serve({
       color: #888;
       font-size: 0.9rem;
     }
+    .version {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      color: #444;
+      font-size: 0.75rem;
+    }
   </style>
 </head>
 <body>
   <h1>Random Cat</h1>
   <img id="cat" src="${catUrl}" alt="A random cat photo" />
   <p class="timer">Next cat in <span id="countdown">10</span>s</p>
+  <p class="version">v${version}</p>
   <script>
     const img = document.getElementById('cat');
     const countdown = document.getElementById('countdown');
