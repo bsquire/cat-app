@@ -58,10 +58,10 @@ const server = Bun.serve({
     }
     .version {
       position: fixed;
-      bottom: 1rem;
-      right: 1rem;
+      bottom: 2rem;
+      right: 1.5rem;
       color: #444;
-      font-size: 0.75rem;
+      font-size: 1rem;
     }
   </style>
 </head>
