@@ -1,13 +1,25 @@
+async function randomCatUrl(): Promise<string> {
+  const res = await fetch("https://api.thecatapi.com/v1/images/search");
+  const [cat] = await res.json() as { url: string }[];
+  return cat.url;
+}
+
 const server = Bun.serve({
   port: 3000,
   async fetch(req) {
     const url = new URL(req.url);
+
+    if (url.pathname === "/api/cat") {
+      return new Response(JSON.stringify({ url: await randomCatUrl() }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     if (url.pathname !== "/") {
       return new Response("Not Found", { status: 404 });
     }
 
-    const res = await fetch("https://api.thecatapi.com/v1/images/search");
-    const [cat] = await res.json() as { url: string }[];
+    const catUrl = await randomCatUrl();
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -35,23 +47,40 @@ const server = Bun.serve({
       border-radius: 16px;
       box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
       object-fit: contain;
+      transition: opacity 0.3s;
     }
-    a {
-      color: #7eb8f7;
-      font-size: 1rem;
-      text-decoration: none;
-      padding: 0.6rem 1.4rem;
-      border: 1px solid #7eb8f7;
-      border-radius: 8px;
-      transition: background 0.15s;
+    img.loading { opacity: 0.4; }
+    .timer {
+      color: #888;
+      font-size: 0.9rem;
     }
-    a:hover { background: rgba(126, 184, 247, 0.1); }
   </style>
 </head>
 <body>
   <h1>Random Cat</h1>
-  <img src="${cat.url}" alt="A random cat photo" />
-  <a href="/">Show another</a>
+  <img id="cat" src="${catUrl}" alt="A random cat photo" />
+  <p class="timer">Next cat in <span id="countdown">10</span>s</p>
+  <script>
+    const img = document.getElementById('cat');
+    const countdown = document.getElementById('countdown');
+    let seconds = 10;
+
+    async function nextCat() {
+      img.classList.add('loading');
+      const res = await fetch('/api/cat');
+      const { url } = await res.json();
+      const next = new Image();
+      next.onload = () => { img.src = url; img.classList.remove('loading'); };
+      next.src = url;
+      seconds = 10;
+    }
+
+    setInterval(() => {
+      seconds--;
+      countdown.textContent = seconds;
+      if (seconds <= 0) nextCat();
+    }, 1000);
+  </script>
 </body>
 </html>`;
 
